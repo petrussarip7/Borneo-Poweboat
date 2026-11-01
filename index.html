@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Borneo Powerboat — Live Graphics</title>
+<style>
+:root{--cyan:#27d8ef;--gold:#ffca55;--panel:rgba(5,13,24,.92);--line:rgba(255,255,255,.18)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#fff;font-family:Arial,Helvetica,sans-serif}
+#stage{position:relative;width:100vw;height:100vh;background:transparent}
+.scorebug{position:absolute;left:2.2%;right:2.2%;bottom:3.5%;padding:1.2% 1.5% 1.4%;background:linear-gradient(110deg,rgba(3,12,25,.96),rgba(9,30,48,.91));border:1px solid rgba(39,216,239,.65);border-left:7px solid var(--cyan);border-radius:10px;box-shadow:0 6px 26px #0008}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:8px}
+.brand{font-size:clamp(12px,2.1vw,24px);font-weight:900;letter-spacing:1.4px;text-transform:uppercase}
+.brand span{color:var(--cyan)}.event{font-size:clamp(9px,1.4vw,16px);font-weight:700;color:#dceaf4;text-align:right}
+.meta{display:flex;gap:7px;align-items:center;margin-bottom:8px}
+.pill{background:#102c42;border:1px solid #27617a;border-radius:4px;padding:4px 9px;font-size:clamp(9px,1.3vw,15px);font-weight:800;letter-spacing:.5px}
+.pill.hot{background:#8a2020;border-color:#ff6969}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 7px}
+.boat{display:flex;align-items:center;min-width:0;height:clamp(22px,4.5vh,42px);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:4px;overflow:hidden}
+.pos{flex:0 0 12%;height:100%;display:grid;place-items:center;background:var(--c);color:#06111d;font-size:clamp(10px,1.65vw,19px);font-weight:1000}
+.boatname{padding:0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(9px,1.45vw,16px);font-weight:800;flex:1}
+.team{font-size:clamp(7px,1.05vw,12px);color:#b7d3e4;padding-right:6px;white-space:nowrap}
+#gear{position:absolute;right:10px;top:10px;width:34px;height:34px;border:1px solid #ffffff66;border-radius:50%;background:#071626bb;color:white;font-size:18px;z-index:5}
+#editor{display:none;position:absolute;inset:4%;z-index:10;background:#071321f5;border:1px solid var(--cyan);border-radius:12px;padding:14px;overflow:auto;box-shadow:0 8px 30px #000b}
+#editor.show{display:block}.edhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+h2{font-size:18px;margin:0}.field{display:flex;flex-direction:column;gap:4px;margin:7px 0}
+label{font-size:11px;color:#9fc5d9;font-weight:bold}input,select{width:100%;padding:9px;border-radius:6px;border:1px solid #416174;background:#102436;color:white;font-size:14px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}.boatedit{display:grid;grid-template-columns:54px 1fr 1fr;gap:6px;margin:6px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+button.action{border:0;border-radius:6px;padding:10px 13px;font-weight:800;background:var(--cyan);color:#04111b}
+button.secondary{background:#294358;color:white}button.danger{background:#9f3434;color:white}
+.note{font-size:11px;color:#a9c4d4;line-height:1.4}
+@media(max-aspect-ratio:1/1){.scorebug{left:1%;right:1%;bottom:2%;padding:2%}.grid{gap:3px}.boat{height:4vh}.team{display:none}}
+</style></head>
+<body><div id="stage">
+<button id="gear" aria-label="Open controls">⚙</button>
+<section class="scorebug">
+ <div class="top"><div class="brand"><span>BORNEO</span> POWERBOAT</div><div class="event" id="eventOut">PESTA SONG 2026</div></div>
+ <div class="meta"><div class="pill" id="categoryOut">OPEN CATEGORY</div><div class="pill hot" id="lapOut">LAP 1 / 5</div><div class="pill" id="statusOut">LIVE RESULTS</div></div>
+ <div class="grid" id="grid"></div>
+</section>
+<section id="editor">
+ <div class="edhead"><h2>LIVE GRAPHICS CONTROL</h2><button class="action secondary" id="close">HIDE CONTROLS</button></div>
+ <div class="cols">
+  <div class="field"><label>EVENT NAME</label><input id="eventIn" value="Pesta Song 2026"></div>
+  <div class="field"><label>CATEGORY</label><input id="categoryIn" value="Open Category"></div>
+  <div class="field"><label>CURRENT LAP</label><input id="lapIn" type="number" min="1" max="99" value="1"></div>
+  <div class="field"><label>TOTAL LAPS</label><input id="totalIn" type="number" min="1" max="99" value="5"></div>
+ </div>
+ <div class="field"><label>BOAT LIST — edit position, boat number/name and team</label><div id="boatFields"></div></div>
+ <div class="actions"><button class="action" id="apply">UPDATE OVERLAY & HIDE</button><button class="action secondary" id="show">PREVIEW / SHOW</button><button class="action danger" id="reset">RESET SAMPLE DATA</button></div>
+ <p class="note">One-phone mode: tap ⚙ on the overlay to open controls, edit the results, then tap UPDATE OVERLAY & HIDE before continuing the broadcast. The control panel is part of the same web page; no second phone or server is needed. Test touch controls before the event.</p>
+</section></div>
+<script>
+const colors=['#36d7f0','#ffca55','#ff6b6b','#8be28b','#c29aff','#ff9d52','#65a9ff','#f28ac5','#c5d66b','#74e0c2','#e6a7ff','#ffdf70','#9db8ff','#ff8e8e','#a6e5ff'];
+const sample=Array.from({length:15},(_,i)=>({pos:i+1,no:String(i+1).padStart(2,'0'),name:'BOAT '+String(i+1).padStart(2,'0'),team:'TEAM'}));
+let data={event:'Pesta Song 2026',category:'Open Category',lap:1,total:5,boats:sample};
+const $=id=>document.getElementById(id);
+function render(){
+ $('eventOut').textContent=data.event.toUpperCase();$('categoryOut').textContent=data.category.toUpperCase();
+ $('lapOut').textContent=`LAP ${data.lap} / ${data.total}`;
+ $('grid').innerHTML=data.boats.slice().sort((a,b)=>a.pos-b.pos).map((b,i)=>`<div class="boat"><div class="pos" style="--c:${colors[(Math.max(1,Number(b.pos)||i+1)-1)%15]}">${b.pos}</div><div class="boatname">${esc(b.no)} · ${esc(b.name)}</div><div class="team">${esc(b.team)}</div></div>`).join('');
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function buildEditor(){
+ $('eventIn').value=data.event;$('categoryIn').value=data.category;$('lapIn').value=data.lap;$('totalIn').value=data.total;
+ $('boatFields').innerHTML=data.boats.map((b,i)=>`<div class="boatedit"><input aria-label="Position ${i+1}" type="number" min="1" max="15" data-i="${i}" data-k="pos" value="${b.pos}"><input aria-label="Boat name ${i+1}" data-i="${i}" data-k="name" value="${esc(b.name)}" placeholder="Boat name"><input aria-label="Team ${i+1}" data-i="${i}" data-k="team" value="${esc(b.team)}" placeholder="Team"></div>`).join('');
+}
+function readEditor(){
+ data.event=$('eventIn').value.trim()||'Boat Race';data.category=$('categoryIn').value.trim()||'Category';
+ data.lap=Math.max(1,Number($('lapIn').value)||1);data.total=Math.max(1,Number($('totalIn').value)||5);
+ document.querySelectorAll('[data-i]').forEach(el=>{data.boats[Number(el.dataset.i)][el.dataset.k]=el.dataset.k==='pos'?Math.max(1,Math.min(15,Number(el.value)||1)):el.value;});
+ render();
+ try{localStorage.setItem('borneoPowerboat15',JSON.stringify(data));}catch(e){}
+}
+$('gear').onclick=()=>{$('editor').classList.add('show');buildEditor();};
+$('close').onclick=()=>{$('editor').classList.remove('show');};
+$('apply').onclick=()=>{readEditor();$('editor').classList.remove('show');};
+$('show').onclick=()=>{readEditor();$('editor').classList.remove('show');};
+$('reset').onclick=()=>{data={event:'Pesta Song 2026',category:'Open Category',lap:1,total:5,boats:sample.map(x=>({...x}))};buildEditor();render();};
+try{const saved=localStorage.getItem('borneoPowerboat15');if(saved)data=JSON.parse(saved);}catch(e){}
+render();
+</script></body></html>
